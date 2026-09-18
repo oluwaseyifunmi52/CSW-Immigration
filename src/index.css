@@ -1,0 +1,453 @@
+﻿
+
+/* ============ ROOT & BASE ============ */
+:root {
+  --bg-dark: #0d0d0f;
+  --bg-sider: #151515;
+  --bg-canvas: #0b0b0b;
+  --fg-light: #f5f5f5;
+  --fg-muted: #999999;
+  --accent-primary: #6b46c1;
+  --accent-primary-hover: #5a3a9c;
+  --accent-success: #10b981;
+  --accent-danger: #f87171;
+  --border: #333333;
+  --card-bg: #1c1c1c;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* ============ ROOT & BASE ============ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "SF Pro Display", "SF UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-dark);
+  color: var(--fg-light);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+/* ============ LAYOUT ============ */
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+.app {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ============ SIDEBAR ============ */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--bg-sider);
+  border-radius: 0;
+  margin: 0;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  height: 100%;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+/* No title text - just the palette items */
+
+/* ============ PALETTE ITEMS ============ */
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.palette-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.palette-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.palette-item:active {
+  transform: scale(0.98);
+}
+
+.palette-item.grabbing {
+  cursor: grabbing;
+}
+
+.palette-item.grabbing + .palette-item {
+  pointer-events: none;
+}
+
+.palette-item .object-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.palette-item .item-label {
+  font-size: 14px;
+  color: var(--fg-light);
+  white-space: normal;
+  line-height: 1.4;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* ============ NODES — CIRCULAR ============ */
+.node {
+  width: 80px;
+  height: 80px;
+  position: absolute;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  z-index: 10;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  will-change: transform;
+  box-shadow: var(--shadow-sm);
+}
+
+.node:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.1), var(--shadow-sm);
+}
+
+.node.selected {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.3);
+}
+
+.node.dragging {
+  z-index: 100;
+  cursor: grabbing;
+  box-shadow: var(--shadow-md);
+}
+
+.node-header {
+  display: none;
+}
+
+.node-title {
+  display: none;
+}
+
+/* Node delete button */
+.node-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+  padding: 0;
+}
+
+.node-delete-btn:hover {
+  color: var(--accent-danger);
+}
+
+.node-delete-btn:focus-visible {
+  outline: 2px solid var(--accent-danger);
+  outline-offset: 2px;
+}
+
+.node-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.node-label {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fg-light);
+  line-height: 1;
+  text-align: center;
+}
+
+.node {
+  overflow: visible;
+}
+
+.node-ports {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.port {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: crosshair;
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+  pointer-events: auto;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.4);
+  position: relative;
+}
+
+.port.input-port { margin-left: -6px; }
+.port.output-port { margin-right: -6px; }
+
+.port:hover {
+  background: var(--accent-primary-hover);
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px rgba(107,70,193,0.3), 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.port.input-port {
+  background: var(--accent-success);
+}
+
+.port.input-port:hover {
+  background: #0ca671;
+}
+
+.port.output-port {
+  background: var(--accent-primary);
+}
+
+.port.output-port:hover {
+  background: var(--accent-primary-hover);
+}
+
+/* ============ CANVAS CONTAINER ============ */
+.canvas-wrapper {
+  flex: 1;
+  background: var(--bg-canvas);
+  position: relative;
+  overflow: auto;
+  min-height: 0;
+}
+
+.canvas-wrapper.drag-over {
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+.canvas-wrapper.drag-over::after {
+  content: "Drop to create node";
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 20;
+}
+.canvas-wrapper.connecting .node { opacity: 0.9; }
+.canvas-wrapper.connecting .port.input-port { box-shadow: 0 0 0 2px var(--accent-success), 0 1px 4px rgba(0,0,0,0.4); }
+.canvas-wrapper.connecting .port.input-port:hover { transform: scale(1.35); }
+
+/* Dotted grid background */
+.canvas-wrapper::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle, var(--fg-muted) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============ CONNECTIONS (SVG) ============ */
+.connection-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.connection-path {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-miterlimit: 4;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+  pointer-events: all;
+}
+
+.connection-path.hovered {
+  stroke: var(--accent-primary);
+  stroke-width: 3;
+}
+
+.connection-path.selected {
+  stroke: var(--accent-primary);
+  stroke-width: 3;
+  stroke-dasharray: 4 2;
+}
+
+/* Arrowhead styling */
+.connection-arrowhead {
+  fill: var(--fg-muted);
+  stroke: none;
+  transition: fill 0.15s ease;
+}
+
+.connection-path.hovered .connection-arrowhead {
+  fill: var(--accent-primary);
+}
+
+.connection-path.selected .connection-arrowhead {
+  fill: var(--accent-primary);
+}
+
+/* Temporary connection preview during drag */
+.connection-preview {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-miterlimit: 4;
+  pointer-events: none;
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--fg-muted);
+  pointer-events: none;
+  z-index: 10;
+  width: 100%;
+  padding: 40px 20px;
+}
+
+.empty-state text {
+  font-size: 14px;
+  fill: var(--fg-muted);
+}
+
+.empty-state .subtitle {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+  .sidebar {
+    width: 260px;
+  }
+}
+
+@media (max-width: 968px) {
+  .sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-item,
+  .node,
+  .connection-path {
+    transition: none !important;
+  }
+}
+
+/* ============ FOCUS STATES ============ */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
