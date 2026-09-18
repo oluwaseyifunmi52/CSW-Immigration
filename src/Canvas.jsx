@@ -11,6 +11,8 @@ function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, c
   const [sidebarDrag, setSidebarDrag] = useState(null);
   const [, forceUpdate] = useState(0);
 
+  const genId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`);
+
   const getWorldCoords = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -48,7 +50,6 @@ function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, c
       tempLineRef.current = { startX: connectingFromRef.current.startX, startY: connectingFromRef.current.startY, endX: w.x, endY: w.y };
       forceUpdate((v) => v + 1);
     };
-    const genId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`);
   const handlePointerUp = (e) => {
       if (!connectingFromRef.current) return;
       const w = getWorldCoords(e);
