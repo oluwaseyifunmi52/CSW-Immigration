@@ -1,13 +1,12 @@
 import React, { useRef } from "react";
 
-function Node({ id, label, x, y, onPortClick, onPositionChange, onDelete, isDragging, onDragStateChange }) {
+function Node({ id, label, x, y, onPositionChange, onDelete, isDragging, onPortDown }) {
   const nodeRef = useRef(null);
-  const dragRef = useRef(null);
 
   const handlePointerDown = (e) => {
     if (e.target.classList.contains("port")) {
       e.stopPropagation();
-      if (onPortClick) onPortClick(e, id, e.target.classList.contains("input-port") ? "input" : "output");
+      onPortDown(e, id);
       return;
     }
     if (e.target.closest(".node-delete-btn")) return;
@@ -56,14 +55,16 @@ function Node({ id, label, x, y, onPortClick, onPositionChange, onDelete, isDrag
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
     >
-      <button className="node-delete-btn" onClick={(e) => { e.stopPropagation(); onDelete?.(id); }} aria-label={`Delete node ${label}`}>×</button>
       <div className="node-body"><div className="node-label">{label.includes("A") ? "A" : label.includes("B") ? "B" : label}</div></div>
-      <div className="node-ports">
-        <div className="port input-port" onPointerDown={(e) => { e.stopPropagation(); onPortClick?.(e, id, "input"); }} />
-        <div className="port output-port" onPointerDown={(e) => { e.stopPropagation(); onPortClick?.(e, id, "output"); }} />
+      <button className="node-delete-btn" onClick={(e) => { e.stopPropagation(); onDelete?.(id); }} aria-label={`Delete node ${label}`}>×</button>
+      <div className="node-port-wrapper">
+        <div
+          className="port"
+          onPointerDown={(e) => { e.stopPropagation(); onPortDown?.(e, id); }}
+          aria-label={`Connect from ${label}`}
+        />
       </div>
     </div>
   );
 }
 export { Node };
-

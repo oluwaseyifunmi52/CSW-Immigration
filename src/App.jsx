@@ -32,7 +32,7 @@ export default function App() {
 
   const deleteObject = useCallback((id) => {
     setObjects((prev) => prev.filter((o) => o.id !== id));
-    setConnections((prev) => prev.filter((c) => c.sourceNodeId !== id && c.targetNodeId !== id));
+    setConnections((prev) => prev.filter((c) => c.fromNodeId !== id && c.toNodeId !== id));
   }, []);
 
   return (

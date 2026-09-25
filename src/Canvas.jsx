@@ -2,16 +2,15 @@
 import "./index.css";
 import { Node } from "./Node";
 
-function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, connections, setConnections, connectingFromRef, tempLineRef }) {
+function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, connections, setConnections }) {
   const canvasRef = useRef(null);
   const [activeNodeDragId, setActiveNodeDragId] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const dragCounterRef = useRef(0);
-  const [connecting, setConnecting] = useState(false);
   const [sidebarDrag, setSidebarDrag] = useState(null);
-  const [, forceUpdate] = useState(0);
-
-  const genId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`);
+  const [connecting, setConnecting] = useState(false);
+  const [tempLine, setTempLine] = useState(null);
+  const dragCounterRef = useRef(0);
+  const R = 40;
 
   const getWorldCoords = (e) => {
     const canvas = canvasRef.current;
@@ -20,67 +19,92 @@ function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, c
     return { x: e.clientX - rect.left + canvas.scrollLeft, y: e.clientY - rect.top + canvas.scrollTop };
   };
 
-  const R = 40;
-  const getEdgePoint = (from, to, isSource) => {
-    const fx = from.x + R, fy = from.y + R;
-    const tx = to.x + R, ty = to.y + R;
-    const dx = tx - fx, dy = ty - fy;
-    const len = Math.hypot(dx, dy) || 1;
-    const ux = dx / len, uy = dy / len;
-    return isSource ? { x: fx + ux * R, y: fy + uy * R } : { x: tx - ux * R, y: ty - uy * R };
-  };
-  const bezierPath = (sx, sy, tx, ty) => {
-    const dx = Math.abs(tx - sx);
-    const offset = Math.max(40, dx * 0.5);
-    return `M ${sx},${sy} C ${sx + offset},${sy} ${tx - offset},${ty} ${tx},${ty}`;
-  };
+  const dottedStraightPath = (sx, sy, tx, ty) => `M ${sx},${sy} L ${tx},${ty}`;
+
   const renderedConnections = connections.map((conn) => {
-    const fromNode = objects.find((n) => n.id === conn.sourceNodeId);
-    const toNode = objects.find((n) => n.id === conn.targetNodeId);
+    const fromNode = objects.find((n) => n.id === conn.fromNodeId);
+    const toNode = objects.find((n) => n.id === conn.toNodeId);
     if (!fromNode || !toNode) return null;
-    const fromPort = getEdgePoint(fromNode, toNode, true);
-    const toPort = getEdgePoint(fromNode, toNode, false);
-    return <path key={conn.id} d={bezierPath(fromPort.x, fromPort.y, toPort.x, toPort.y)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeLinecap="round" />;
+    const fromDot = { x: fromNode.x + R, y: fromNode.y + R };
+    const toDot = { x: toNode.x + R, y: toNode.y + R };
+    return <path key={conn.id} d={dottedStraightPath(fromDot.x, fromDot.y, toDot.x, toDot.y)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeDasharray="5 5" strokeLinecap="round" />;
   });
 
   useEffect(() => {
-    const handlePointerMove = (e) => {
-      if (!connectingFromRef.current) return;
-      const w = getWorldCoords(e);
-      tempLineRef.current = { startX: connectingFromRef.current.startX, startY: connectingFromRef.current.startY, endX: w.x, endY: w.y };
-      forceUpdate((v) => v + 1);
+    let cleanup = false;
+
+    const handlePointerDown = (e, nodeId) => {
+      e.stopPropagation();
+      setConnecting(true);
+      setTempLine({ nodeId, startX: objects.find(n => n.id === nodeId)?.x + R || 0, startY: objects.find(n => n.id === nodeId)?.y + R || 0 });
     };
-  const handlePointerUp = (e) => {
-      if (!connectingFromRef.current) return;
+
+    const handlePointerMove = (e) => {
+      if (!connecting || !tempLine) return;
       const w = getWorldCoords(e);
-      const overNode = objects.find((node) => { const cx = node.x + 40, cy = node.y + 40; return Math.hypot(w.x - cx, w.y - cy) <= 40; });
-      if (overNode && overNode.id !== connectingFromRef.current.nodeId) {
-        const nc = { id: genId(), sourceNodeId: connectingFromRef.current.nodeId, sourcePort: "output", targetNodeId: overNode.id, targetPort: "input" };
+      setTempLine(prev => prev ? { ...prev, endX: w.x, endY: w.y } : { startX: w.x, startY: w.y, endX: w.x, endY: w.y });
+    };
+
+    const handlePointerUp = (e) => {
+      if (!connecting || !tempLine) {
+        setConnecting(false);
+        setTempLine(null);
+        return;
+      }
+      const w = getWorldCoords(e);
+      const overNode = objects.find((node) => {
+        const cx = node.x + R, cy = node.y + R;
+        return Math.hypot(w.x - cx, w.y - cy) <= R && node.id !== tempLine.nodeId;
+      });
+
+      setConnecting(false);
+      setTempLine(null);
+
+      if (overNode) {
+        const nc = { id: `${tempLine.nodeId}-${overNode.id}`, fromNodeId: tempLine.nodeId, toNodeId: overNode.id };
         setConnections((prev) => {
-          const exists = prev.some((c) => (c.sourceNodeId === nc.sourceNodeId && c.targetNodeId === nc.targetNodeId) || (c.sourceNodeId === nc.targetNodeId && c.targetNodeId === nc.sourceNodeId));
+          const exists = prev.some((c) => (c.fromNodeId === nc.fromNodeId && c.toNodeId === nc.toNodeId) || (c.fromNodeId === nc.toNodeId && c.toNodeId === nc.fromNodeId));
           return exists ? prev : [...prev, nc];
         });
       }
-      connectingFromRef.current = null;
-      tempLineRef.current = null;
-      setConnecting(false);
-      forceUpdate((v) => v + 1);
     };
-    document.addEventListener("pointermove", handlePointerMove);
-    document.addEventListener("pointerup", handlePointerUp);
-    return () => { document.removeEventListener("pointermove", handlePointerMove); document.removeEventListener("pointerup", handlePointerUp); };
-  }, [objects, setConnections]);
 
-  const handleDragEnter = (e) => { e.preventDefault(); dragCounterRef.current++; setIsDragOver(true); e.dataTransfer.dropEffect = "copy";
+    if (canvasRef.current) {
+      canvasRef.current.addEventListener("pointerdown", (e) => {
+        const target = e.target;
+        if (target.classList.contains("port")) {
+          const nodeId = target.parentNode.parentNode.id;
+          handlePointerDown(e, nodeId);
+        }
+      });
+
+      canvasRef.current.addEventListener("pointermove", (e) => {
+        handlePointerMove(e);
+      });
+
+      canvasRef.current.addEventListener("pointerup", (e) => {
+        handlePointerUp(e);
+      });
+    }
+
+    return () => {
+      if (canvasRef.current) {
+        canvasRef.current.removeEventListener("pointerdown", (e) => { });
+        canvasRef.current.removeEventListener("pointermove", (e) => { });
+        canvasRef.current.removeEventListener("pointerup", (e) => { });
+      }
+    };
+  }, [connecting, objects, setConnections]);
+
+  const handleDragEnter = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy";
     const w = getWorldCoords(e);
-    const hasType = e.dataTransfer.types.includes("application/x-object-type") || e.dataTransfer.types.includes("text/plain");
-    if (hasType && !sidebarDrag) setSidebarDrag({ sx: w.x, sy: w.y, ex: w.x, ey: w.y });
+    setIsDragOver(true);
   };
   const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy";
     const w = getWorldCoords(e);
     setSidebarDrag(prev => prev ? { ...prev, ex: w.x, ey: w.y } : { sx: w.x, sy: w.y, ex: w.x, ey: w.y });
   };
-  const handleDragLeave = (e) => { e.preventDefault(); dragCounterRef.current = Math.max(0, dragCounterRef.current - 1); if (dragCounterRef.current === 0) { setIsDragOver(false); setSidebarDrag(null); } };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragOver(false); setSidebarDrag(null); };
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -91,38 +115,24 @@ function Canvas({ objects = [], onAddObject, onUpdatePosition, onDeleteObject, c
     if (!type) type = e.dataTransfer.getData("text/plain");
     if (!type || (type !== "objectA" && type !== "objectB")) return;
     const world = getWorldCoords(e);
-    onAddObject(type, Math.max(0, world.x - 40), Math.max(0, world.y - 40));
+    onAddObject(type, Math.max(0, world.x - R), Math.max(0, world.y - R));
   };
 
   return (
     <div ref={canvasRef} className={`canvas-wrapper ${isDragOver ? "drag-over" : ""} ${connecting ? "connecting" : ""}`} onDragEnter={handleDragEnter} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
         {renderedConnections}
-        {sidebarDrag && <path d={bezierPath(sidebarDrag.sx, sidebarDrag.sy, sidebarDrag.ex, sidebarDrag.ey)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeDasharray="6 4" strokeLinecap="round" opacity={0.85} />}
-        {tempLineRef.current && <path d={bezierPath(tempLineRef.current.startX, tempLineRef.current.startY, tempLineRef.current.endX, tempLineRef.current.endY)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeDasharray="6 4" strokeLinecap="round" opacity={0.9} />}
+        {tempLine && <path d={dottedStraightPath(tempLine.startX, tempLine.startY, tempLine.endX || tempLine.startX, tempLine.endY || tempLine.startY)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeDasharray="6 4" strokeLinecap="round" opacity={0.9} />}
+        {sidebarDrag && <path d={dottedStraightPath(sidebarDrag.sx, sidebarDrag.sy, sidebarDrag.ex, sidebarDrag.ey)} stroke="#6b46c1" strokeWidth={2} fill="none" strokeDasharray="6 4" strokeLinecap="round" opacity={0.85} />}
       </svg>
       {objects.map((node) => (
         <Node key={node.id} id={node.id} label={node.label} x={node.x} y={node.y} isDragging={activeNodeDragId === node.id}
           onPositionChange={onUpdatePosition}
           onDelete={onDeleteObject}
           onDragStateChange={(nid, dragging) => setActiveNodeDragId(dragging ? nid : null)}
-          onPortClick={(e, nid, portType) => {
-            const w = getWorldCoords(e);
-            if (portType === "output") {
-              const sx = node.x + 40, sy = node.y + 40;
-              connectingFromRef.current = { nodeId: nid, startX: sx, startY: sy };
-              tempLineRef.current = { startX: sx, startY: sy, endX: w.x, endY: w.y };
-              setConnecting(true);
-              forceUpdate((v) => v + 1);
-            } else if (portType === "input" && connectingFromRef.current) {
-              const from = connectingFromRef.current;
-              const nc = { id: genId(), sourceNodeId: from.nodeId, sourcePort: "output", targetNodeId: nid, targetPort: "input" };
-              setConnections((prev) => {
-                const exists = prev.some((c) => (c.sourceNodeId === nc.sourceNodeId && c.targetNodeId === nc.targetNodeId) || (c.sourceNodeId === nc.targetNodeId && c.targetNodeId === nc.sourceNodeId));
-                return exists ? prev : [...prev, nc];
-              });
-              connectingFromRef.current = null; tempLineRef.current = null; setConnecting(false); forceUpdate((v) => v + 1);
-            }
+          onPortDown={(e, nid) => {
+            e.stopPropagation();
+            handlePointerDown(e, nid);
           }}
         />
       ))}
