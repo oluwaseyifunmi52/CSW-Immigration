@@ -10,12 +10,10 @@ const NODE_TYPES = {
 export default function App() {
   const [objects, setObjects] = useState([]);
   const [connections, setConnections] = useState([]);
-  const connectingFromRef = useRef(null);
-  const tempLineRef = useRef(null);
 
   const genId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`);
   const addObject = useCallback((type, worldX, worldY) => {
-    if (!NODE_TYPES[type]) return;
+    if (!NODE_TYPES[type]) return null;
     const newObject = {
       id: genId(),
       type,
@@ -23,16 +21,17 @@ export default function App() {
       x: worldX,
       y: worldY,
     };
-    setObjects((prev) => [...prev, newObject]);
+    setObjects(prev => [...prev, newObject]);
+    return newObject.id;
   }, []);
 
   const updateObjectPosition = useCallback((id, x, y) => {
-    setObjects((prev) => prev.map((o) => (o.id === id ? { ...o, x, y } : o)));
+    setObjects(prev => prev.map(o => o.id === id ? { ...o, x, y } : o));
   }, []);
 
   const deleteObject = useCallback((id) => {
-    setObjects((prev) => prev.filter((o) => o.id !== id));
-    setConnections((prev) => prev.filter((c) => c.fromNodeId !== id && c.toNodeId !== id));
+    setObjects(prev => prev.filter(o => o.id !== id));
+    setConnections(prev => prev.filter(c => c.fromNodeId !== id && c.toNodeId !== id));
   }, []);
 
   return (
@@ -40,13 +39,12 @@ export default function App() {
       <Sidebar />
       <Canvas
         objects={objects}
+        setObjects={setObjects}
         onAddObject={addObject}
         onUpdatePosition={updateObjectPosition}
         onDeleteObject={deleteObject}
         connections={connections}
         setConnections={setConnections}
-        connectingFromRef={connectingFromRef}
-        tempLineRef={tempLineRef}
       />
     </div>
   );

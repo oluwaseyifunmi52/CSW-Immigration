@@ -29,7 +29,9 @@ function Sidebar() {
             }}
             aria-label={`Drag ${item.label} to canvas`}
           >
-            <span className="object-circle" style={{ cursor: "grab", userSelect: "none" }} />
+            <span className="object-circle" style={{ cursor: "grab", userSelect: "none" }}>
+              <span className="sidebar-port" />
+            </span>
             <span className="item-label">{item.label}</span>
           </div>
         ))}

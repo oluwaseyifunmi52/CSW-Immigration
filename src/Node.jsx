@@ -1,7 +1,8 @@
 import React, { useRef } from "react";
 
-function Node({ id, label, x, y, onPositionChange, onDelete, isDragging, onPortDown }) {
+function Node({ id, label, x, y, onPositionChange, onDelete, isDragging, onPortDown, onDragStateChange }) {
   const nodeRef = useRef(null);
+  const dragRef = useRef(null);
 
   const handlePointerDown = (e) => {
     if (e.target.classList.contains("port")) {
@@ -45,6 +46,7 @@ function Node({ id, label, x, y, onPositionChange, onDelete, isDragging, onPortD
   return (
     <div
       ref={nodeRef}
+      id={id}
       className={`node ${isDragging ? "dragging" : ""}`}
       style={{ left: `${x}px`, top: `${y}px` }}
       role="button"
@@ -60,6 +62,7 @@ function Node({ id, label, x, y, onPositionChange, onDelete, isDragging, onPortD
       <div className="node-port-wrapper">
         <div
           className="port"
+          style={{ position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)' }}
           onPointerDown={(e) => { e.stopPropagation(); onPortDown?.(e, id); }}
           aria-label={`Connect from ${label}`}
         />

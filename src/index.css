@@ -85,7 +85,24 @@ body {
 
 /* No title text - just the palette items */
 
-/* ============ PALETTE ITEMS ============ */
+/* ============ SIDEBAR PORT ============ */
+.object-circle {
+  position: relative;
+}
+
+.sidebar-port {
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.4);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
 .palette {
   display: flex;
   flex-direction: column;
@@ -253,8 +270,8 @@ body {
 }
 
 .port {
-  width: 14px;
-  height: 14px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--accent-primary);
   cursor: crosshair;
